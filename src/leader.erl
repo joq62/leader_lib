@@ -381,6 +381,7 @@ send_start_election(App)->
 %%--------------------------------------------------------------------
 send_declare_victory(App)->
     Nodes=sd:get_node(App),
+    io:format("sd:get_node(App)  ~p~n",[{Nodes,App,node(),?MODULE,?LINE}]),
     LowerNodes=nodes_with_lower_ids(Nodes),
     io:format("LowerNodes  ~p~n",[{LowerNodes,node(),?MODULE,?LINE}]),
     [rpc:cast(N,App,declare_victory,[node()])||N<-LowerNodes].
