@@ -149,8 +149,8 @@ init(App) ->
 %% Handling call messages
 %% @end
 %%--------------------------------------------------------------------
-handle_call(Request, _From, State) ->
-    io:format("Unmatched signal ~p~n",[{Request,?MODULE,?LINE}]),
+handle_call(Request, From, State) ->
+    sd:cast(nodelog,nodelog,log,[warning,?MODULE_STRING,?LINE,["Unmatched ",Request,From,node()]]),
     Reply = {error,[unmatched_signal,Request]},
     {reply, Reply, State}.
 
@@ -161,7 +161,7 @@ handle_call(Request, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast(Request, State) ->
-    io:format("Unmatched signal ~p~n",[{Request,?MODULE,?LINE}]),
+    sd:cast(nodelog,nodelog,log,[warning,?MODULE_STRING,?LINE,["Unmatched ",Request,node()]]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -187,7 +187,7 @@ handle_info({nodedown,Node}, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info({CallerPid,who_is_leader}, State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["who_is_leader ",CallerPid,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["who_is_leader ",CallerPid,node()]]),
  %   io:format(" ~p~n",[{CallerPid,ping,node(),?MODULE,?LINE}]),
     CallerPid!{self(),State#state.leader},
     {noreply,State};
@@ -200,14 +200,14 @@ handle_info({CallerPid,ping}, State) ->
 
 %% state election -----------------------------------------------------
 handle_info({start_election}, #state{fsm_state=election}=State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["start_election  ",election,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["start_election  ",election,node()]]),
     send_start_election(State#state.app),
     set_election_timer(State#state.timeout_pid,?ELECTION_RESPONSE_TIMEOUT),
     NewState=State,
     {noreply, NewState};
 
 handle_info({declare_victory,LeaderNode}, #state{fsm_state=election}=State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["declare_victory ",LeaderNode,election,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["declare_victory ",LeaderNode,election,node()]]),
     case LeaderNode==node() of
 	true->
 	    NewState=State#state{leader=node()};
@@ -220,13 +220,13 @@ handle_info({declare_victory,LeaderNode}, #state{fsm_state=election}=State) ->
     {noreply, NewState};
 
 handle_info({i_am_alive,HigherNode}, #state{fsm_state=election}=State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["i_am_alive , HigherNode ",HigherNode,election,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["i_am_alive , HigherNode ",HigherNode,election,node()]]),
     set_election_timer(State#state.timeout_pid,infinity),
     NewState=State,
     {noreply, NewState};
 
 handle_info({timeout_election}, #state{fsm_state=election}=State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["timeout_election ",election,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["timeout_election ",election,node()]]),
     send_declare_victory(State#state.app),
     set_election_timer(State#state.timeout_pid,infinity),
     NewState=State#state{fsm_state=leader,
@@ -235,7 +235,7 @@ handle_info({timeout_election}, #state{fsm_state=election}=State) ->
 
 %% state candidate -----------------------------------------------------
 handle_info({start_election}, #state{fsm_state=candidate}=State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["start_election  ",candidate,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["start_election  ",candidate,node()]]),
     send_i_am_alive(State#state.app),
     send_start_election(State#state.app),
     set_election_timer(State#state.timeout_pid,?ELECTION_RESPONSE_TIMEOUT),
@@ -243,26 +243,26 @@ handle_info({start_election}, #state{fsm_state=candidate}=State) ->
     {noreply, NewState};
 
 handle_info({i_am_alive,HigherNode}, #state{fsm_state=candidate}=State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["i_am_alive , HigherNode ",HigherNode,candidate,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["i_am_alive , HigherNode ",HigherNode,candidate,node()]]),
     NewState=State,
     {noreply, NewState};
 
 handle_info({declare_victory,LeaderNode}, #state{fsm_state=candidate}=State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["declare_victory ",LeaderNode,candidate,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["declare_victory ",LeaderNode,candidate,node()]]),
     monitor_node(State#state.leader, false),
     monitor_node(LeaderNode, true),
     NewState=State#state{leader=LeaderNode},
     {noreply, NewState};
 
 handle_info({timeout_election}, #state{fsm_state=candidate}=State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["timeout_election ",candidate,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["timeout_election ",candidate,node()]]),
     set_election_timer(State#state.timeout_pid,infinity),
     NewState=State,
     {noreply, NewState};
 
 %% state leader -----------------------------------------------------
 handle_info({start_election}, #state{fsm_state=leader}=State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["start_election  ",leader,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["start_election  ",leader,node()]]),
     send_i_am_alive(State#state.app),
     send_start_election(State#state.app),
     set_election_timer(State#state.timeout_pid,?ELECTION_RESPONSE_TIMEOUT),
@@ -270,12 +270,12 @@ handle_info({start_election}, #state{fsm_state=leader}=State) ->
     {noreply, NewState};
 
 handle_info({i_am_alive,HigherNode}, #state{fsm_state=leader}=State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["i_am_alive , HigherNode ",HigherNode,leader,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["i_am_alive , HigherNode ",HigherNode,leader,node()]]),
     NewState=State,
     {noreply, NewState};
 
 handle_info({declare_victory,LeaderNode}, #state{fsm_state=leader}=State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["declare_victory ",LeaderNode,leader,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["declare_victory ",LeaderNode,leader,node()]]),
     case LeaderNode==node() of
 	true->
 	    NewState=State#state{leader=node()};
@@ -288,14 +288,14 @@ handle_info({declare_victory,LeaderNode}, #state{fsm_state=leader}=State) ->
     {noreply, NewState};
 
 handle_info({timeout_election}, #state{fsm_state=leader}=State) ->
-    sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["timeout_election ",leader,node()]]),
+    %sd:cast(nodelog,nodelog,log,[notice,?MODULE_STRING,?LINE,["timeout_election ",leader,node()]]),
     set_election_timer(State#state.timeout_pid,infinity),
     NewState=State,
     {noreply, NewState};
 
 
 handle_info(Info, State) ->
-    io:format("Unmatched signal ~p~n",[{Info,?MODULE,?LINE}]),
+    sd:cast(nodelog,nodelog,log,[warning,?MODULE_STRING,?LINE,["Unmatched ",Info,node()]]),
     {noreply, State}.
 
 
